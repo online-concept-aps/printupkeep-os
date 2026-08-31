@@ -45,6 +45,16 @@ jobs:
           source repository/src/modules/printupkeep/config
           echo "version=${PRINTUPKEEP_CONNECTOR_VERSION}" >> "$GITHUB_OUTPUT"
 
+      - name: Image version
+        id: imgver
+        run: |
+          source repository/src/config
+          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
+            echo "version=${GITHUB_REF_NAME#v}" >> "$GITHUB_OUTPUT"
+          else
+            echo "version=${DIST_VERSION}" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Download connector tarball (pre-chroot injection)
         # The chroot has no GitHub credentials, and the release lives on a
         # private repo. Fetching it here with the workflow token and dropping
@@ -78,7 +88,9 @@ jobs:
         run: |
           sudo modprobe loop
           cd repository/src
-          sudo BASE_BOARD="${BASE_BOARD}" bash -x ./build_dist
+          sudo BASE_BOARD="${BASE_BOARD}" \
+            PRINTUPKEEP_IMAGE_VERSION="${{ steps.imgver.outputs.version }}" \
+            bash -x ./build_dist
 
       - name: Verify image contents (imager_custom assertion)
         run: |
@@ -114,8 +126,35 @@ jobs:
           sudo test -f rootfs-mnt/etc/avahi/services/http.service
           sudo test -x rootfs-mnt/opt/printupkeep/update.sh
           sudo test -x rootfs-mnt/opt/printupkeep/control.sh
+          # image-release stamp: web UI feature-gates on it, so it must exist
+          # and carry the exact version this build was told to stamp
+          sudo cat rootfs-mnt/etc/printupkeep/image-release
+          sudo grep -q "^VERSION=${{ steps.imgver.outputs.version }}$" rootfs-mnt/etc/printupkeep/image-release
+          sudo grep -q '^FEATURES=.*ssh-control' rootfs-mnt/etc/printupkeep/image-release
+          sudo grep -q 'ssh-on' rootfs-mnt/opt/printupkeep/control.sh
+          # sshd installed but OFF by default — only the web UI / Imager turns it on
+          sudo test -e rootfs-mnt/usr/lib/systemd/system/ssh.service
+          sudo test ! -e rootfs-mnt/etc/systemd/system/multi-user.target.wants/ssh.service
+          # hardening drop-in present
+          sudo grep -q '^PermitRootLogin no' rootfs-mnt/etc/ssh/sshd_config.d/printupkeep.conf
+          # no shared host keys baked into the image
+          sudo sh -c '! ls rootfs-mnt/etc/ssh/ssh_host_*_key 2>/dev/null'
+          # our own path (control.sh) regenerates this device's keys when SSH
+          # is switched on — so we don't depend on a base-image regenerator
+          sudo grep -q 'ssh-keygen -A' rootfs-mnt/opt/printupkeep/control.sh
 
           sudo umount rootfs-mnt
+
+          # Boot (FAT) partition: the CustomPiOS base module touches
+          # /boot/firmware/ssh when BASE_SSH_ENABLE=yes, which would make
+          # sshswitch enable sshd on first boot. We force BASE_SSH_ENABLE=no;
+          # prove the flag is absent so a regression turns CI red.
+          mkdir -p boot-mnt
+          sudo mount -o ro "${LOOP}p1" boot-mnt
+          sudo test ! -e boot-mnt/ssh
+          sudo test ! -e boot-mnt/ssh.txt
+          sudo umount boot-mnt
+
           sudo losetup -d "$LOOP"
           echo "All rootfs assertions passed"
 
@@ -123,13 +162,7 @@ jobs:
         id: package
         run: |
           set -x
-          source repository/src/config
-          if [[ "${GITHUB_REF}" == refs/tags/v* ]]; then
-            VERSION="${GITHUB_REF_NAME#v}"
-          else
-            VERSION="${DIST_VERSION}"
-          fi
-          IMAGE="printupkeep-os-${VERSION}-arm64"
+          IMAGE="printupkeep-os-${{ steps.imgver.outputs.version }}-arm64"
           # workspace is root-owned (the build runs under sudo)
           sudo mv repository/src/workspace/*.img "${IMAGE}.img"
           sudo chown "$(id -u):$(id -g)" "${IMAGE}.img"

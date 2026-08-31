@@ -17,6 +17,13 @@ export BASE_OVERRIDE_HOSTNAME=printupkeep
 # userconf-pi handle it on first boot, exactly like stock Raspberry Pi OS.
 export BASE_ADD_USER=no
 
+# SSH stays OFF unless the owner turns it on (Raspberry Pi Imager, or the
+# connector web UI's Remote-access switch). CustomPiOS defaults this to "yes",
+# which touches /boot/firmware/ssh and makes sshswitch enable sshd on first
+# boot — silently defeating the off-by-default contract. Force it off; CI
+# asserts the boot flag is absent.
+export BASE_SSH_ENABLE=no
+
 # Node.js (~220 MB) + connector need room during the build; the final image is
 # shrunk back to minimum + BASE_IMAGE_RESIZEROOT afterwards.
 export BASE_IMAGE_ENLARGEROOT=800
