@@ -102,7 +102,10 @@ jobs:
           sudo test -f "rootfs-mnt/opt/printupkeep/versions/${VERSION}/dist/cli.js"
           test "$(sudo readlink rootfs-mnt/opt/printupkeep/current)" = "/opt/printupkeep/versions/${VERSION}"
           sudo test -f rootfs-mnt/etc/systemd/system/printupkeep-connector.service
-          sudo test -f rootfs-mnt/etc/systemd/system/multi-user.target.wants/printupkeep-connector.service
+          # enable-symlinks are absolute, so check link existence (-L), not the
+          # target (-f would resolve against the HOST filesystem)
+          sudo test -L rootfs-mnt/etc/systemd/system/multi-user.target.wants/printupkeep-connector.service
+          sudo test -L rootfs-mnt/etc/systemd/system/multi-user.target.wants/printupkeep-firstboot.service
           sudo test -f rootfs-mnt/etc/sudoers.d/printupkeep
           sudo test -f rootfs-mnt/etc/avahi/services/http.service
           sudo test -x rootfs-mnt/opt/printupkeep/update.sh
