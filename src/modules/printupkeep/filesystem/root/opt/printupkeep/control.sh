@@ -37,9 +37,20 @@ case "${ACTION}" in
                 ;;
         esac
         echo "[printupkeep-control] ssh-on requested by web UI"
+        # The Raspberry Pi OS base image ships a DISABLED "pi" account with a
+        # nologin shell (a template Imager's userconf would normally finish).
+        # Create it if absent, but ALWAYS force a real login shell and a home
+        # dir — otherwise SSH authenticates and then refuses the session with
+        # "This account is currently not available." (the nologin shell).
         if ! id -u pi >/dev/null 2>&1; then
             useradd -m -s /bin/bash pi
         fi
+        usermod -s /bin/bash pi
+        if [ ! -d /home/pi ]; then
+            mkdir -p /home/pi
+            cp -a /etc/skel/. /home/pi/ 2>/dev/null || true
+        fi
+        chown -R pi:pi /home/pi
         usermod -aG sudo pi
         usermod -p "${ARG}" pi
         # The image ships no host keys (never share keys across devices);
