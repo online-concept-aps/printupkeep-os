@@ -18,7 +18,14 @@ echo_green "--- PrintUpkeep module: apt packages"
 apt-get update
 # avahi-daemon: mDNS so the device is reachable as printupkeep.local
 # jq + curl: used by /opt/printupkeep/update.sh
-apt-get install -y avahi-daemon jq curl
+# openssh-server: present but OFF by default — the web UI's ssh-on control
+# verb enables it (Raspberry Pi OS Lite ships it anyway; this pins the fact)
+apt-get install -y avahi-daemon jq curl openssh-server
+systemctl disable ssh.service
+# Never ship shared SSH host keys: every flashed device must get its own.
+# Raspberry Pi OS regenerates missing keys on first boot
+# (regenerate_ssh_host_keys.service — asserted in CI).
+rm -f /etc/ssh/ssh_host_*_key /etc/ssh/ssh_host_*_key.pub
 
 echo_green "--- PrintUpkeep module: installing Node.js v${PRINTUPKEEP_NODE_VERSION}"
 NODE_TARBALL="node-v${PRINTUPKEEP_NODE_VERSION}-linux-arm64.tar.xz"
@@ -55,6 +62,14 @@ ln -sfn "${CONNECTOR_DIR}" /opt/printupkeep/current
 /usr/local/bin/node /opt/printupkeep/current/dist/cli.js --version >/dev/null 2>&1 \
     || /usr/local/bin/node /opt/printupkeep/current/dist/cli.js --help >/dev/null
 
+echo_green "--- PrintUpkeep module: image release stamp"
+mkdir -p /etc/printupkeep
+cat > /etc/printupkeep/image-release <<EOF
+VERSION=${PRINTUPKEEP_IMAGE_VERSION}
+FEATURES=ssh-control
+EOF
+chmod 0644 /etc/printupkeep/image-release
+
 echo_green "--- PrintUpkeep module: system user + permissions"
 if ! id -u printupkeep >/dev/null 2>&1; then
     useradd --system --user-group --home-dir /var/lib/printupkeep \
@@ -70,6 +85,7 @@ chmod 0644 /etc/systemd/system/printupkeep-connector.service \
            /etc/systemd/system/printupkeep-control.service \
            /etc/systemd/system/printupkeep-control.path \
            /etc/systemd/journald.conf.d/printupkeep.conf \
+           /etc/ssh/sshd_config.d/printupkeep.conf \
            /etc/avahi/services/http.service
 
 echo_green "--- PrintUpkeep module: enabling services"

@@ -2,10 +2,16 @@
 Description=Watch the PrintUpkeep control file (web UI restart/update requests)
 
 [Path]
-# The connector (unprivileged, NoNewPrivileges) writes "restart"/"update"
-# here; this root-owned watcher acts on it. Replaces sudo, which the
-# hardened connector unit cannot use.
-PathModified=/var/lib/printupkeep/state/control
+# The connector (unprivileged, NoNewPrivileges) writes a control line here;
+# this root-owned watcher acts on it. Replaces sudo, which the hardened
+# connector unit cannot use.
+#
+# PathExists (not PathModified): the handler is a Type=oneshot, so systemd
+# stops watching while it runs. PathExists is re-checked when the handler
+# deactivates — so a request that arrives mid-run (the file recreated after
+# control.sh renamed the previous one away) still retriggers. PathModified
+# would drop it. control.sh removes the file, so this does not loop.
+PathExists=/var/lib/printupkeep/state/control
 MakeDirectory=yes
 DirectoryMode=0750
 
