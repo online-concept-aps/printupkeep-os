@@ -13,4 +13,4 @@
 # tagged connector-v<version> on this repo into filesystem/connector/ BEFORE
 # the CustomPiOS build, so the chroot script installs from a local file and
 # needs no network or GitHub credentials inside the chroot.
-[ -n "$PRINTUPKEEP_CONNECTOR_VERSION" ] || PRINTUPKEEP_CONNECTOR_VERSION=0.1.0
+[ -n "$PRINTUPKEEP_CONNECTOR_VERSION" ] || PRINTUPKEEP_CONNECTOR_VERSION=0.1.2
