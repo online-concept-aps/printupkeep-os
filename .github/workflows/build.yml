@@ -132,6 +132,8 @@ jobs:
           sudo grep -q "^VERSION=${{ steps.imgver.outputs.version }}$" rootfs-mnt/etc/printupkeep/image-release
           sudo grep -q '^FEATURES=.*ssh-control' rootfs-mnt/etc/printupkeep/image-release
           sudo grep -q 'ssh-on' rootfs-mnt/opt/printupkeep/control.sh
+          # the pi account gets a real login shell (base image ships it nologin)
+          sudo grep -q 'usermod -s /bin/bash pi' rootfs-mnt/opt/printupkeep/control.sh
           # sshd installed but OFF by default — only the web UI / Imager turns it on
           sudo test -e rootfs-mnt/usr/lib/systemd/system/ssh.service
           sudo test ! -e rootfs-mnt/etc/systemd/system/multi-user.target.wants/ssh.service
