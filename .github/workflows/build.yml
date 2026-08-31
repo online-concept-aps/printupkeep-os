@@ -125,7 +125,9 @@ jobs:
             VERSION="${DIST_VERSION}"
           fi
           IMAGE="printupkeep-os-${VERSION}-arm64"
-          mv repository/src/workspace/*.img "${IMAGE}.img"
+          # workspace is root-owned (the build runs under sudo)
+          sudo mv repository/src/workspace/*.img "${IMAGE}.img"
+          sudo chown "$(id -u):$(id -g)" "${IMAGE}.img"
           sha256sum "${IMAGE}.img" > checksums.txt
           xz -9 -T0 "${IMAGE}.img"
           sha256sum "${IMAGE}.img.xz" >> checksums.txt
