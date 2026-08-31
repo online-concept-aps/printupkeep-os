@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+# PrintUpkeep OS module — runs inside the (qemu) arm64 chroot as root.
+# Installs Node.js, the PrintUpkeep connector, the printupkeep system user,
+# avahi, and the systemd units shipped in filesystem/root.
+set -x
+set -e
+
+export LC_ALL=C
+
+source /common.sh
+install_cleanup_trap
+
+echo_green "--- PrintUpkeep module: installing static filesystem"
+# systemd units, avahi service, sudoers, journald drop-in, update.sh
+unpack /filesystem/root / root
+
+echo_green "--- PrintUpkeep module: apt packages"
+apt-get update
+# avahi-daemon: mDNS so the device is reachable as printupkeep.local
+# jq + curl: used by /opt/printupkeep/update.sh
+apt-get install -y avahi-daemon jq curl
+
+echo_green "--- PrintUpkeep module: installing Node.js v${PRINTUPKEEP_NODE_VERSION}"
+NODE_TARBALL="node-v${PRINTUPKEEP_NODE_VERSION}-linux-arm64.tar.xz"
+NODE_URL="https://nodejs.org/dist/v${PRINTUPKEEP_NODE_VERSION}/${NODE_TARBALL}"
+wget -q --tries=3 -O "/tmp/${NODE_TARBALL}" "${NODE_URL}"
+echo "${PRINTUPKEEP_NODE_SHA256}  /tmp/${NODE_TARBALL}" | sha256sum -c -
+mkdir -p /opt/node
+tar -xJf "/tmp/${NODE_TARBALL}" -C /opt/node --strip-components=1
+rm -f "/tmp/${NODE_TARBALL}"
+ln -sfn /opt/node/bin/node /usr/local/bin/node
+ln -sfn /opt/node/bin/npm /usr/local/bin/npm
+ln -sfn /opt/node/bin/npx /usr/local/bin/npx
+ln -sfn /opt/node/bin/corepack /usr/local/bin/corepack
+/usr/local/bin/node --version
+
+echo_green "--- PrintUpkeep module: installing connector v${PRINTUPKEEP_CONNECTOR_VERSION}"
+CONNECTOR_TGZ="/filesystem/connector/printupkeep-connector-${PRINTUPKEEP_CONNECTOR_VERSION}.tgz"
+if [ ! -f "${CONNECTOR_TGZ}" ]; then
+    echo_red "Missing ${CONNECTOR_TGZ}."
+    echo_red "The connector tarball must be downloaded into src/modules/printupkeep/filesystem/connector/"
+    echo_red "before the build (the CI workflow does this via 'gh release download connector-v<ver>')."
+    exit 1
+fi
+if [ -f "${CONNECTOR_TGZ}.sha256" ]; then
+    echo "$(cut -d' ' -f1 "${CONNECTOR_TGZ}.sha256")  ${CONNECTOR_TGZ}" | sha256sum -c -
+fi
+CONNECTOR_DIR="/opt/printupkeep/versions/${PRINTUPKEEP_CONNECTOR_VERSION}"
+mkdir -p "${CONNECTOR_DIR}"
+tar -xzf "${CONNECTOR_TGZ}" -C "${CONNECTOR_DIR}"
+ln -sfn "${CONNECTOR_DIR}" /opt/printupkeep/current
+
+# Smoke test: prove the ESM bundle + production node_modules load under arm64.
+# (The CLI has no --version yet; --help exercises the same import graph.)
+/usr/local/bin/node /opt/printupkeep/current/dist/cli.js --version >/dev/null 2>&1 \
+    || /usr/local/bin/node /opt/printupkeep/current/dist/cli.js --help >/dev/null
+
+echo_green "--- PrintUpkeep module: system user + permissions"
+if ! id -u printupkeep >/dev/null 2>&1; then
+    useradd --system --user-group --home-dir /var/lib/printupkeep \
+        --no-create-home --shell /usr/sbin/nologin printupkeep
+fi
+
+chown -R root:root /opt/printupkeep
+chmod 0755 /opt/printupkeep/update.sh
+
+# sudoers: exact commands only; validate or die
+chown root:root /etc/sudoers.d/printupkeep
+chmod 0440 /etc/sudoers.d/printupkeep
+visudo -c -f /etc/sudoers.d/printupkeep
+
+chmod 0644 /etc/systemd/system/printupkeep-connector.service \
+           /etc/systemd/system/printupkeep-firstboot.service \
+           /etc/systemd/system/printupkeep-update.service \
+           /etc/systemd/journald.conf.d/printupkeep.conf \
+           /etc/avahi/services/http.service
+
+echo_green "--- PrintUpkeep module: enabling services"
+systemctl enable printupkeep-firstboot.service
+systemctl enable printupkeep-connector.service
+systemctl enable avahi-daemon.service
+# printupkeep-update.service is intentionally NOT enabled: it is a oneshot
+# started on demand (sudo systemctl start printupkeep-update.service).
+
+echo_green "--- PrintUpkeep module: done"

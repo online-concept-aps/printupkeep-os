@@ -1,0 +1,67 @@
+# FUTURE WORKFLOW — for the MAIN repo (online-concept-aps/printupkeep), not
+# this one. Kept here as documentation until the repos go public.
+#
+# In a follow-up PR on the main repo, copy this file to
+# .github/workflows/connector-release.yml there. It builds the connector and
+# attaches printupkeep-connector-<ver>.tgz (+ .sha256) to the release whenever
+# a connector-v* tag is pushed — replacing the temporary arrangement where
+# tarballs are hand-built and attached to releases on printupkeep-os.
+# (printupkeep-os's update.sh and CI then switch their REPO/--repo values from
+# printupkeep-os to printupkeep.)
+
+name: Connector release
+
+on:
+  push:
+    tags: ["connector-v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: connector
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Build
+        run: |
+          npm ci
+          npm run build
+
+      - name: Stage production bundle
+        run: |
+          VERSION="${GITHUB_REF_NAME#connector-v}"
+          PKG_VERSION=$(node -p "require('./package.json').version")
+          if [ "$VERSION" != "$PKG_VERSION" ]; then
+            echo "::error::tag version ($VERSION) != package.json version ($PKG_VERSION)"
+            exit 1
+          fi
+          STAGE=$(mktemp -d)
+          cp -r dist package.json package-lock.json "$STAGE/"
+          ( cd "$STAGE" && npm ci --omit=dev --ignore-scripts --no-audit --no-fund )
+          # Smoke test: the bundle must load with production deps only
+          ( cd "$STAGE" && node dist/cli.js --version >/dev/null 2>&1 || node dist/cli.js --help >/dev/null )
+          TARBALL="printupkeep-connector-${VERSION}.tgz"
+          tar --owner=0 --group=0 -czf "$TARBALL" -C "$STAGE" dist package.json package-lock.json node_modules
+          sha256sum "$TARBALL" > "${TARBALL}.sha256"
+          cat "${TARBALL}.sha256"
+
+      - name: Create release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          VERSION="${GITHUB_REF_NAME#connector-v}"
+          gh release create "${GITHUB_REF_NAME}" \
+            --repo "${{ github.repository }}" \
+            --title "connector v${VERSION}" \
+            --notes "PrintUpkeep connector v${VERSION} — deployable bundle (dist/ + production node_modules) for PrintUpkeep OS self-update." \
+            "printupkeep-connector-${VERSION}.tgz" \
+            "printupkeep-connector-${VERSION}.tgz.sha256"
