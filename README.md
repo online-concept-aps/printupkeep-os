@@ -1,0 +1,3 @@
+# PrintUpkeep OS
+
+PrintUpkeep OS is a flashable Raspberry Pi image (in the spirit of OctoPi) that ships the PrintUpkeep connector pre-installed and ready to run. It is built with [CustomPiOS](https://github.com/guysoft/CustomPiOS) on top of Raspberry Pi OS Lite (arm64), boots as `printupkeep.local`, starts the connector as a hardened systemd service on port 80, and supports safe, atomic self-updates of the connector with rollback. Flash it with Raspberry Pi Imager (hostname, Wi-Fi and SSH customization fully supported), point it at your PrintUpkeep account, and your printers are online. Supported hardware: Raspberry Pi 5, 4/400, 3/3+, and Zero 2 W.

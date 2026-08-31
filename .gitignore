@@ -1,0 +1,21 @@
+# CustomPiOS build outputs and workspaces
+src/workspace*/
+src/image/
+src/image-*/
+!src/image-*/.gitkeep
+src/custompios_path
+build.log
+*.img
+*.img.xz
+*.img.gz
+
+# Connector tarballs are injected by CI (gh release download), never committed
+src/modules/printupkeep/filesystem/connector/*.tgz
+src/modules/printupkeep/filesystem/connector/*.sha256
+
+# Local overrides
+src/config.local
+
+# OS noise
+.DS_Store
+Thumbs.db
