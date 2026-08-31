@@ -8,6 +8,10 @@ After=network-online.target printupkeep-firstboot.service
 Type=simple
 User=printupkeep
 Group=printupkeep
+# The "+" runs this one line as root: the control path unit's MakeDirectory
+# can win the boot race and create state/ root-owned, which would block the
+# connector's restart/update control file. Heal ownership on every start.
+ExecStartPre=+/bin/sh -c 'mkdir -p /var/lib/printupkeep/state && chown printupkeep:printupkeep /var/lib/printupkeep/state && chmod 0750 /var/lib/printupkeep/state'
 # --web-port 80: the connector's local web UI (flag lands with the web UI work
 # in the connector; already wired here so the image is ready for it).
 ExecStart=/usr/local/bin/node /opt/printupkeep/current/dist/cli.js --config /var/lib/printupkeep/connector.json --web-port 80
