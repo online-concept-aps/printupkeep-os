@@ -1,7 +1,6 @@
 # CustomPiOS build outputs and workspaces
 src/workspace*/
-src/image/
-src/image-*/
+src/image-*/*
 !src/image-*/.gitkeep
 src/custompios_path
 build.log

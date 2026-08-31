@@ -1,0 +1,34 @@
+#!/usr/bin/env bash
+# PrintUpkeep OS module — build assertions, run inside the chroot after all
+# module start scripts. Fail the build rather than ship a broken image.
+set -x
+set -e
+
+export LC_ALL=C
+
+source /common.sh
+
+# Raspberry Pi Imager's OS customization (hostname / Wi-Fi / SSH / user) is
+# applied on first boot by raspberrypi-sys-mods. If this file is gone, the
+# Imager dialog silently does nothing — treat that as a build failure.
+if [ ! -f /usr/lib/raspberrypi-sys-mods/imager_custom ]; then
+    echo_red "ASSERTION FAILED: /usr/lib/raspberrypi-sys-mods/imager_custom is missing."
+    echo_red "Raspberry Pi Imager customization would be broken. Aborting build."
+    exit 1
+fi
+
+# Firstboot user creation should also still be intact (no baked-in account).
+# Path may move between Raspberry Pi OS releases, so warn rather than fail.
+if [ ! -f /usr/lib/userconf-pi/userconf ] && [ ! -x /usr/bin/cancel-rename ]; then
+    echo_red "WARNING: userconf-pi firstboot machinery not found at the expected paths."
+fi
+
+test -x /opt/node/bin/node
+test -L /usr/local/bin/node
+test -f /opt/printupkeep/current/dist/cli.js
+test -x /opt/printupkeep/update.sh
+test -f /etc/systemd/system/multi-user.target.wants/printupkeep-connector.service
+test -f /etc/systemd/system/multi-user.target.wants/printupkeep-firstboot.service
+id -u printupkeep >/dev/null
+
+echo_green "--- PrintUpkeep module: all image assertions passed"

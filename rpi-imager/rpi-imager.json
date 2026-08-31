@@ -1,0 +1,18 @@
+{
+  "os_list": [
+    {
+      "name": "PrintUpkeep OS",
+      "description": "Raspberry Pi OS Lite (arm64, Debian 13) with the PrintUpkeep connector preinstalled. Boots as printupkeep.local with the connector web UI on port 80.",
+      "website": "https://github.com/online-concept-aps/printupkeep-os",
+      "icon": "https://raw.githubusercontent.com/online-concept-aps/printupkeep-os/main/media/rpi-imager-printupkeep.png",
+      "url": "https://github.com/online-concept-aps/printupkeep-os/releases/download/vX.Y.Z/printupkeep-os-X.Y.Z-arm64.img.xz",
+      "release_date": "TBD",
+      "image_download_size": 0,
+      "image_download_sha256": "TBD-sha256-of-img-xz",
+      "extract_size": 0,
+      "extract_sha256": "TBD-sha256-of-raw-img",
+      "devices": ["pi5-64bit", "pi4-64bit", "pi3-64bit"],
+      "init_format": "systemd"
+    }
+  ]
+}

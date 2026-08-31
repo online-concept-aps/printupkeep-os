@@ -1,0 +1,29 @@
+export DIST_NAME=PrintUpkeepOS
+export DIST_VERSION=0.1.0
+
+# base wraps our module: base start -> printupkeep start -> printupkeep end -> base end
+export MODULES="base(printupkeep)"
+
+# arm64 only. Supported: Pi 5, 4/400, 3/3+, Zero 2 W (all 64-bit capable).
+export BASE_BOARD=raspberrypiarm64
+export BASE_DISTRO=raspios64
+export BASE_ARCH=arm64
+
+# avahi advertises this as printupkeep.local
+export BASE_OVERRIDE_HOSTNAME=printupkeep
+
+# No default user account is baked into the image. Create one with Raspberry Pi
+# Imager's OS customization dialog (recommended) — raspberrypi-sys-mods /
+# userconf-pi handle it on first boot, exactly like stock Raspberry Pi OS.
+export BASE_ADD_USER=no
+
+# Node.js (~220 MB) + connector need room during the build; the final image is
+# shrunk back to minimum + BASE_IMAGE_RESIZEROOT afterwards.
+export BASE_IMAGE_ENLARGEROOT=800
+export BASE_IMAGE_RESIZEROOT=200
+
+# Raspberry Pi Imager metadata (used by CustomPiOS release helpers)
+export RPI_IMAGER_NAME="PrintUpkeep OS"
+export RPI_IMAGER_DESCRIPTION="Raspberry Pi OS Lite (arm64) with the PrintUpkeep connector preinstalled"
+export RPI_IMAGER_ICON="https://raw.githubusercontent.com/online-concept-aps/printupkeep-os/main/media/rpi-imager-printupkeep.png"
+export RPI_IMAGER_WEBSITE="https://github.com/online-concept-aps/printupkeep-os"

@@ -1,0 +1,12 @@
+[Unit]
+Description=PrintUpkeep connector self-update
+Documentation=https://github.com/online-concept-aps/printupkeep-os/blob/main/docs/UPDATING.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=oneshot
+ExecStart=/opt/printupkeep/update.sh
+
+# Not [Install]-enabled on purpose: started on demand with
+#   sudo systemctl start printupkeep-update.service

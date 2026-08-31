@@ -1,0 +1,13 @@
+[Unit]
+Description=PrintUpkeep first-boot setup (state directory)
+ConditionPathExists=!/var/lib/printupkeep/.firstboot-done
+After=local-fs.target
+Before=printupkeep-connector.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/bin/sh -c 'mkdir -p /var/lib/printupkeep && chown printupkeep:printupkeep /var/lib/printupkeep && chmod 0750 /var/lib/printupkeep && touch /var/lib/printupkeep/.firstboot-done'
+
+[Install]
+WantedBy=multi-user.target

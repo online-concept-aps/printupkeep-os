@@ -1,0 +1,9 @@
+# Everything that ends up inside the image or runs on Linux must be LF.
+* text=auto eol=lf
+
+# Binary artifacts (never committed, but belt and braces)
+*.img binary
+*.xz binary
+*.tgz binary
+*.png binary
+*.ico binary
