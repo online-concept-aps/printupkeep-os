@@ -106,9 +106,14 @@ jobs:
           # target (-f would resolve against the HOST filesystem)
           sudo test -L rootfs-mnt/etc/systemd/system/multi-user.target.wants/printupkeep-connector.service
           sudo test -L rootfs-mnt/etc/systemd/system/multi-user.target.wants/printupkeep-firstboot.service
-          sudo test -f rootfs-mnt/etc/sudoers.d/printupkeep
+          sudo test -L rootfs-mnt/etc/systemd/system/multi-user.target.wants/printupkeep-control.path
+          # sudo is impossible under NoNewPrivileges — the control path unit
+          # replaced the sudoers whitelist, which must be GONE.
+          sudo test ! -e rootfs-mnt/etc/sudoers.d/printupkeep
+          sudo test -f rootfs-mnt/etc/systemd/system/printupkeep-control.service
           sudo test -f rootfs-mnt/etc/avahi/services/http.service
           sudo test -x rootfs-mnt/opt/printupkeep/update.sh
+          sudo test -x rootfs-mnt/opt/printupkeep/control.sh
 
           sudo umount rootfs-mnt
           sudo losetup -d "$LOOP"

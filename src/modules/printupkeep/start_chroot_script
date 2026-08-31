@@ -62,24 +62,25 @@ if ! id -u printupkeep >/dev/null 2>&1; then
 fi
 
 chown -R root:root /opt/printupkeep
-chmod 0755 /opt/printupkeep/update.sh
-
-# sudoers: exact commands only; validate or die
-chown root:root /etc/sudoers.d/printupkeep
-chmod 0440 /etc/sudoers.d/printupkeep
-visudo -c -f /etc/sudoers.d/printupkeep
+chmod 0755 /opt/printupkeep/update.sh /opt/printupkeep/control.sh
 
 chmod 0644 /etc/systemd/system/printupkeep-connector.service \
            /etc/systemd/system/printupkeep-firstboot.service \
            /etc/systemd/system/printupkeep-update.service \
+           /etc/systemd/system/printupkeep-control.service \
+           /etc/systemd/system/printupkeep-control.path \
            /etc/systemd/journald.conf.d/printupkeep.conf \
            /etc/avahi/services/http.service
 
 echo_green "--- PrintUpkeep module: enabling services"
 systemctl enable printupkeep-firstboot.service
 systemctl enable printupkeep-connector.service
+systemctl enable printupkeep-control.path
 systemctl enable avahi-daemon.service
 # printupkeep-update.service is intentionally NOT enabled: it is a oneshot
-# started on demand (sudo systemctl start printupkeep-update.service).
+# the control watcher starts on demand. No sudoers: the connector unit runs
+# with NoNewPrivileges (sudo is impossible there by design) — the web UI's
+# restart/update buttons write /var/lib/printupkeep/state/control instead,
+# and root-owned printupkeep-control.path acts on it.
 
 echo_green "--- PrintUpkeep module: done"

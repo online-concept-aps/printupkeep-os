@@ -1,0 +1,13 @@
+[Unit]
+Description=Watch the PrintUpkeep control file (web UI restart/update requests)
+
+[Path]
+# The connector (unprivileged, NoNewPrivileges) writes "restart"/"update"
+# here; this root-owned watcher acts on it. Replaces sudo, which the
+# hardened connector unit cannot use.
+PathModified=/var/lib/printupkeep/state/control
+MakeDirectory=yes
+DirectoryMode=0750
+
+[Install]
+WantedBy=multi-user.target

@@ -7,7 +7,7 @@ Before=printupkeep-connector.service
 [Service]
 Type=oneshot
 RemainAfterExit=yes
-ExecStart=/bin/sh -c 'mkdir -p /var/lib/printupkeep && chown printupkeep:printupkeep /var/lib/printupkeep && chmod 0750 /var/lib/printupkeep && touch /var/lib/printupkeep/.firstboot-done'
+ExecStart=/bin/sh -c 'mkdir -p /var/lib/printupkeep/state && chown -R printupkeep:printupkeep /var/lib/printupkeep && chmod 0750 /var/lib/printupkeep /var/lib/printupkeep/state && touch /var/lib/printupkeep/.firstboot-done'
 
 [Install]
 WantedBy=multi-user.target

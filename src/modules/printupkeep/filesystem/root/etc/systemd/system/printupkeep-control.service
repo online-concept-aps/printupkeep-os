@@ -1,0 +1,6 @@
+[Unit]
+Description=Act on the PrintUpkeep control file
+
+[Service]
+Type=oneshot
+ExecStart=/opt/printupkeep/control.sh
