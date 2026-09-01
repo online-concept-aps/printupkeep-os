@@ -30,8 +30,14 @@ fail() { log "ERROR: $*"; exit 1; }
 TMP_DIR="$(mktemp -d /tmp/printupkeep-update.XXXXXX)"
 STAGING=""
 cleanup() {
+    # Preserve the real exit status: an EXIT trap whose last command returns
+    # non-zero (the [ -n "$STAGING" ] test when STAGING is empty) would
+    # otherwise mask exit 0 as a failure, so a "nothing to do" run showed up
+    # as systemd status=1/FAILURE.
+    rc=$?
     rm -rf "${TMP_DIR}"
     [ -n "${STAGING}" ] && rm -rf "${STAGING}"
+    return $rc
 }
 trap cleanup EXIT
 
